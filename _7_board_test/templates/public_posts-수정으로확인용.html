@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부산 테마여행 공공데이터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-emerald-600 cursor-pointer" onclick="location.href='/'">부산 테마여행</h1>
+            <a href="/" class="text-sm font-medium text-indigo-600 hover:underline bg-indigo-50 px-3 py-1.5 rounded-lg transition">메인 게시판으로</a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6 flex-1 w-full">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">부산 테마여행 명소</h2>
+            <p class="text-sm text-gray-500 mt-1">공공데이터 포털에서 제공하는 부산의 추천 테마여행 정보입니다.</p>
+        </div>
+
+        <div id="public-posts-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => { loadPublicPosts(); });
+
+        async function loadPublicPosts() {
+            const container = document.getElementById('public-posts-container');
+            try {
+                const res = await fetch('/api/public-posts');
+                const items = await res.json();
+
+                if (!Array.isArray(items) || items.length === 0) {
+                    container.innerHTML = `<div class="col-span-2 text-center py-12 text-gray-400 bg-white rounded-xl shadow-sm">데이터가 없습니다.</div>`;
+                    return;
+                }
+
+                container.innerHTML = '';
+                items.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition flex flex-col justify-between cursor-pointer overflow-hidden";
+                    card.onclick = () => {
+                        if (item.UC_SEQ) location.href = `/public-posts/${item.UC_SEQ}`;
+                    };
+
+                    const imgSrc = item.MAIN_IMG_NORMAL || item.MAIN_IMG_THUMB || 'https://via.placeholder.com/400x200?text=No+Image';
+
+                    card.innerHTML = `
+                        <div>
+                            <div class="h-48 w-full bg-gray-200 overflow-hidden">
+                                <img src="${imgSrc}" alt="${item.TITLE}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="p-5">
+                                <h3 class="text-lg font-bold text-gray-900 mb-2">${item.TITLE || '제목 없음'}</h3>
+                                <p class="text-sm text-gray-600 line-clamp-2 mb-4">${item.ITEMCNTNTS || '설명이 없습니다.'}</p>
+                            </div>
+                        </div>
+                        <div class="px-5 pb-5 text-xs text-gray-400 border-t pt-3 mt-auto">
+                            📍 ${item.ADDR1 || '위치 정보 없음'}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<div class="col-span-2 text-center py-12 text-red-400 bg-white rounded-xl shadow-sm">데이터를 불러오는 중 오류가 발생했습니다.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

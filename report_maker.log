@@ -1,0 +1,76 @@
+2026-09-04 15:04:35,314 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:04:35,429 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-04 15:04:50,485 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:04:50,559 [WARNING] 전송 실패 1/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:04:52,603 [WARNING] 전송 실패 2/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:04:56,649 [WARNING] 전송 실패 3/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:09:50,127 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:09:50,141 [WARNING] 전송 실패 1/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:09:52,148 [WARNING] 전송 실패 2/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:09:56,179 [WARNING] 전송 실패 3/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:14:50,390 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:14:50,416 [WARNING] 전송 실패 1/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:14:52,446 [WARNING] 전송 실패 2/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:14:56,479 [WARNING] 전송 실패 3/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:17:23,621 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:17:23,743 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-04 15:18:33,394 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:18:33,501 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-04 15:19:50,398 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:19:50,435 [WARNING] 전송 실패 1/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:19:52,462 [WARNING] 전송 실패 2/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:19:56,477 [WARNING] 전송 실패 3/3: 404 Client Error: Not Found for url: http://localhost:5678/webhook-test/30370b2c-96d2-4409-a301-e98849fb17fb
+2026-09-04 15:21:03,844 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:21:03,910 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-04 15:21:21,498 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:21:21,591 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-04 15:24:50,065 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:24:50,154 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-04 15:29:50,467 [INFO] 리포트 생성 완료: D:\0-lsy\Python-Labs-Aleph\report.md
+2026-09-04 15:29:50,549 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:22:38,829 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:22:38,874 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:23:58,095 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:23:58,130 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:24:26,974 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:24:27,029 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:24:28,301 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:24:28,347 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:25:02,969 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:25:03,003 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:25:38,862 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:25:38,897 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:25:41,131 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:25:41,167 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:25:42,733 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:25:42,773 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:25:53,744 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:25:53,798 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:26:41,876 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:26:41,927 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:26:47,665 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:26:47,715 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:26:52,239 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:26:52,291 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:28:58,717 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:28:58,751 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:33:58,689 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:33:58,734 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:38:58,635 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:38:58,670 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:43:58,701 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:43:58,737 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:48:58,684 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:48:58,730 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:53:58,637 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:53:58,685 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 11:58:58,620 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 11:58:58,660 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 12:03:58,670 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 12:03:58,713 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 12:08:58,734 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 12:08:58,768 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 12:13:58,662 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 12:13:58,699 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
+2026-09-07 12:18:58,639 [INFO] 리포트 생성 완료: C:\Users\user\Python-Lab-ALeph-T\report.md
+2026-09-07 12:18:58,680 [INFO] 전송 성공 (200) {"message":"Workflow was started"}
