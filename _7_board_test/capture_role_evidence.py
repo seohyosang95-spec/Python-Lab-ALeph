@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+from sqlalchemy import text
 from werkzeug.security import generate_password_hash
 
 from app import ROLE_ADMIN, ROLE_GOLD, ROLE_USER, Post, User, app, db
@@ -32,11 +33,20 @@ ACCOUNTS = [('normal01', ROLE_USER), ('gold01', ROLE_GOLD), ('admin01', ROLE_ADM
 
 
 def seed():
-  """캡처가 항상 같은 화면을 찍도록 데모 데이터를 다시 심는다."""
+  """캡처가 항상 같은 화면을 찍도록 데모 데이터를 다시 심는다.
+
+  ID 도 매번 1 부터 시작하게 맞춘다. 그래야 화면 캡처의 회원 ID 와
+  DB 캡처(role_evidence.sql)의 ID 가 서로 어긋나지 않는다.
+  """
   with app.app_context():
     Post.query.delete()
     User.query.delete()
     db.session.commit()
+    if db.engine.dialect.name == 'mysql':
+      # 행을 지워도 AUTO_INCREMENT 는 되돌아가지 않는다.
+      db.session.execute(text('ALTER TABLE posts AUTO_INCREMENT = 1'))
+      db.session.execute(text('ALTER TABLE users AUTO_INCREMENT = 1'))
+      db.session.commit()
     for username, role in ACCOUNTS:
       db.session.add(User(
           username=username,

@@ -1,0 +1,36 @@
+# 이 실습 전용 MySQL.
+#
+# 다른 실습(예: flask-board)이 이미 3306 을 쓰고 있어도 겹치지 않도록
+# 호스트 포트는 3307 을 쓴다. 컨테이너 안쪽은 평소대로 3306 이다.
+# 컨테이너·볼륨 이름도 이 실습 전용이라 남의 데이터를 건드리지 않는다.
+#
+#     docker compose up -d        # 시작
+#     docker compose ps           # 상태 확인
+#     docker compose down         # 정지 (데이터는 볼륨에 남는다)
+#     docker compose down -v      # 데이터까지 삭제
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: shs95_board_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD를 .env에 설정하세요}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-shs95_board_db}
+      TZ: Asia/Seoul
+    ports:
+      - "${MYSQL_HOST_PORT:-3307}:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - shs95_mysql_data:/var/lib/mysql
+    healthcheck:
+      # 이 검사가 통과해야 DB 가 연결을 받을 준비가 된 것이다.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  shs95_mysql_data:

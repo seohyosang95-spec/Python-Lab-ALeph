@@ -52,6 +52,16 @@
 `app.py` 에 DB 비밀번호가 그대로 적혀 있었다. `os.environ.get(...)` 로 바꾸되
 **기본값은 원래 값 그대로**라, `.env` 가 없는 PC 에서는 동작이 달라지지 않는다.
 
+### DB 를 이 실습 전용으로 분리했다
+
+원래 접속 대상이 `my_new_board_db` 였는데, 이 이름은 다른 실습에서도 쓰는
+스키마다. 그대로 두면 두 과제의 `users`·`posts` 가 같은 테이블을 공유해
+데이터가 섞이고, 제출 증거의 회원 목록에 남의 과제 계정이 끼어든다.
+
+그래서 `docker-compose.yml` 로 **이 실습만의 MySQL** 을 띄운다. 컨테이너·
+볼륨·호스트 포트·스키마가 전부 전용이라 서로를 건드리지 않는다.
+호스트 포트를 3307 로 둔 것도 같은 이유다 — 3306 은 다른 실습이 이미 쓰고 있다.
+
 ---
 
 ## 2. 구현 구조
@@ -149,23 +159,48 @@ def list_users(): ...
 
 ## 4. 실행 방법
 
+### 이 실습은 전용 DB 를 쓴다
+
+`docker-compose.yml` 이 이 실습만의 MySQL 을 띄운다. 컨테이너·볼륨·포트가
+모두 전용이라 다른 실습 DB 를 건드리지 않는다.
+
+| 항목 | 값 | 이유 |
+|---|---|---|
+| 컨테이너 | `shs95_board_mysql` | 이름 충돌 방지 |
+| 볼륨 | `shs95_mysql_data` | 데이터가 섞이지 않게 |
+| 호스트 포트 | **3307** | 다른 실습이 3306 을 쓰고 있어도 겹치지 않게 |
+| 스키마 | `shs95_board_db` | 전용 |
+
 ### 처음 한 번
 
-`.env` 를 만든다. (`.env` 는 커밋되지 않는다)
+`.env.example` 을 `.env` 로 복사해 값을 채운다. (`.env` 는 커밋되지 않는다)
+`docker-compose.yml` 과 `app.py` 가 **같은 `.env`** 를 읽으므로,
+`MYSQL_ROOT_PASSWORD` / `MYSQL_DATABASE` / `MYSQL_HOST_PORT` 와
+`DATABASE_URL` 이 서로 어긋나면 연결되지 않는다.
 
-```
-DATABASE_URL=mysql+pymysql://<계정>:<비밀번호>@localhost:3306/<스키마>
-JWT_SECRET_KEY=<32자 이상 랜덤 문자열>
-PUBLIC_API_KEY=<공공데이터포털 서비스키>
-PORT=5000
+```bash
+docker compose up -d      # DB 시작
+docker compose ps         # STATUS 가 healthy 가 될 때까지 기다린다
 ```
 
-기존 `users` 테이블에는 `role` 컬럼이 없다. `db.create_all()` 은 이미 있는
-테이블에 컬럼을 추가하지 못하므로 **한 번만** 아래를 실행한다.
-(새 스키마로 시작했다면 이 단계는 필요 없다.)
+테이블은 `app.py` 를 실행하면 `db.create_all()` 이 만들어 준다.
+
+이미 쓰던 기존 DB 를 그대로 붙이는 경우에는 `users` 테이블에 `role` 컬럼이
+없다. `db.create_all()` 은 이미 있는 테이블에 컬럼을 추가하지 못하므로
+**한 번만** 아래를 실행한다. (새 스키마로 시작했다면 필요 없다.)
 
 ```bash
 python manage_roles.py --ensure-column
+```
+
+### 도커 명령 정리
+
+```bash
+docker compose up -d       # 시작
+docker compose ps          # 상태 확인
+docker compose logs -f     # 로그
+docker compose down        # 정지 (데이터는 볼륨에 남는다)
+docker compose down -v     # 데이터까지 삭제
 ```
 
 ### 계정과 등급

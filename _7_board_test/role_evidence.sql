@@ -3,9 +3,10 @@
 -- MySQL Shell for VS Code 등에서 이 파일을 열고 실행한다.
 -- 결과 그리드를 캡처하면 "제출 항목 1 - 로그인 유저 권한, 디비" 증거가 된다.
 --
--- 스키마 이름은 .env 의 DATABASE_URL 끝부분과 같아야 한다.
+-- 스키마 이름은 .env 의 MYSQL_DATABASE 와 같아야 한다.
+-- 도커로 띄운 경우 접속 포트는 3306 이 아니라 3307 이다.
 
-USE board_test_db;
+USE shs95_board_db;
 
 -- ① 회원별 등급 (핵심 증거)
 SELECT
