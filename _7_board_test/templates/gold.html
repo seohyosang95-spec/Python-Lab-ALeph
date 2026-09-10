@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>골드 라운지</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+{% include '_nav.html' %}
+
+<main class="max-w-4xl mx-auto px-4 py-8 flex-1 w-full">
+
+    <div class="rounded-2xl p-6 mb-6 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-sm">
+        <p class="text-sm font-medium opacity-90 mb-1">GOLD MEMBERS ONLY</p>
+        <h1 class="text-2xl font-bold mb-2">☕ 골드 라운지</h1>
+        <p class="text-sm opacity-95">
+            {{ current_user.username }}님, 환영합니다. 현재 등급은
+            <strong>{{ current_user.role_name }}({{ current_user.role }})</strong>입니다.
+        </p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+        <h2 class="font-bold text-gray-900 mb-3">이 페이지가 보이는 이유</h2>
+        <p class="text-sm text-gray-600 leading-relaxed">
+            <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">/gold</code> 는 서버에서
+            <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">@page_role_required(ROLE_GOLD)</code> 로 막혀 있습니다.
+            요구 등급은 <strong>골드(1) 이상</strong>이고, 내 등급이 {{ current_user.role }}이라 통과했습니다.
+            일반(0) 등급으로 접속하면 이 화면 대신 403 예외 화면이 나옵니다.
+        </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <p class="text-3xl mb-2">🥐</p>
+            <h3 class="font-bold text-gray-900 mb-1">전용 원두 소식</h3>
+            <p class="text-sm text-gray-500">골드 회원에게 먼저 열리는 합성 공지입니다.</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <p class="text-3xl mb-2">🎟️</p>
+            <h3 class="font-bold text-gray-900 mb-1">중간 관리 권한</h3>
+            <p class="text-sm text-gray-500">골드는 라운지를 볼 수 있지만 회원 관리는 못 합니다.</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <p class="text-3xl mb-2">📌</p>
+            <h3 class="font-bold text-gray-900 mb-1">우선 좌석</h3>
+            <p class="text-sm text-gray-500">등급별로 보이는 내용이 달라지는지 확인용입니다.</p>
+        </div>
+    </div>
+
+    {% if current_user.role >= ROLE_ADMIN %}
+    <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800">
+        관리자({{ current_user.role }})는 골드 페이지도 함께 볼 수 있습니다.
+        등급은 <strong>숫자가 클수록 넓은 권한</strong>이라, 상위 등급이 하위 페이지를 모두 포함합니다.
+        <a href="/admin" class="underline font-medium ml-1">관리자 페이지로 이동 →</a>
+    </div>
+    {% endif %}
+</main>
+</body>
+</html>

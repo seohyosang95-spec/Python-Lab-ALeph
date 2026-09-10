@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 · 회원 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+{% include '_nav.html' %}
+
+<main class="max-w-5xl mx-auto px-4 py-8 flex-1 w-full">
+
+    <div class="rounded-2xl p-6 mb-6 bg-gradient-to-r from-slate-800 to-slate-600 text-white shadow-sm">
+        <p class="text-sm font-medium opacity-90 mb-1">ADMIN ONLY</p>
+        <h1 class="text-2xl font-bold mb-2">🛠️ 관리자 · 회원 관리</h1>
+        <p class="text-sm opacity-95">
+            {{ current_user.username }}님(등급 {{ current_user.role }})으로 접속했습니다.
+            회원 등급을 수정하거나 회원을 삭제할 수 있습니다.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p class="text-xs text-gray-500 mb-1">전체 회원</p>
+            <p class="text-2xl font-bold text-gray-900" id="stat-total">-</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p class="text-xs text-gray-500 mb-1">골드</p>
+            <p class="text-2xl font-bold text-amber-500" id="stat-gold">-</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <p class="text-xs text-gray-500 mb-1">관리자</p>
+            <p class="text-2xl font-bold text-indigo-600" id="stat-admin">-</p>
+        </div>
+    </div>
+
+    <div id="flash" class="hidden mb-4 rounded-xl px-4 py-3 text-sm"></div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h2 class="font-bold text-gray-900">회원 목록</h2>
+            <button onclick="loadUsers()" class="text-sm text-indigo-600 hover:underline">새로고침</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[640px] text-sm whitespace-nowrap">
+                <thead class="bg-gray-50 text-gray-500">
+                    <tr>
+                        <th class="text-left px-5 py-3 font-medium">ID</th>
+                        <th class="text-left px-5 py-3 font-medium">아이디</th>
+                        <th class="text-left px-5 py-3 font-medium">현재 등급</th>
+                        <th class="text-left px-5 py-3 font-medium">게시글</th>
+                        <th class="text-left px-5 py-3 font-medium">등급 변경</th>
+                        <th class="text-right px-5 py-3 font-medium">삭제</th>
+                    </tr>
+                </thead>
+                <tbody id="user-rows" class="divide-y divide-gray-100">
+                    <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400">불러오는 중...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="mt-4 text-xs text-gray-400 leading-relaxed">
+        안전장치: 자기 자신은 삭제할 수 없고 스스로 등급을 내릴 수 없습니다.
+        마지막 남은 관리자도 강등·삭제할 수 없습니다. 회원을 삭제하면 그 회원의 게시글도 함께 삭제됩니다.
+    </p>
+</main>
+
+<script>
+// getCookie() 와 authHeaders() 는 _nav.html 이 모든 페이지에 제공한다.
+const ROLE_BADGE = {
+    0: 'bg-gray-100 text-gray-600',
+    1: 'bg-amber-100 text-amber-700',
+    2: 'bg-indigo-100 text-indigo-700',
+};
+
+function flash(message, ok) {
+    const box = document.getElementById('flash');
+    box.textContent = message;
+    box.className = 'mb-4 rounded-xl px-4 py-3 text-sm ' + (ok
+        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+        : 'bg-red-50 text-red-700 border border-red-100');
+    box.classList.remove('hidden');
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/[&<>'"]/g,
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
+
+async function loadUsers() {
+    const tbody = document.getElementById('user-rows');
+    const res = await fetch('/api/admin/users', { headers: authHeaders() });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-10 text-center text-red-500">
+            ${res.status} · ${escapeHtml(err.msg || '회원 목록을 불러오지 못했습니다.')}</td></tr>`;
+        return;
+    }
+
+    const data = await res.json();
+    const users = data.users;
+    document.getElementById('stat-total').textContent = users.length;
+    document.getElementById('stat-gold').textContent = users.filter(u => u.role === 1).length;
+    document.getElementById('stat-admin').textContent = users.filter(u => u.role === 2).length;
+
+    tbody.innerHTML = '';
+    users.forEach(user => {
+        const options = data.roles.map(role =>
+            `<option value="${role.value}" ${role.value === user.role ? 'selected' : ''}>${escapeHtml(role.name)} (${role.value})</option>`
+        ).join('');
+
+        const tr = document.createElement('tr');
+        tr.className = user.is_me ? 'bg-indigo-50/40' : '';
+        tr.innerHTML = `
+            <td class="px-5 py-3 text-gray-400">${user.id}</td>
+            <td class="px-5 py-3 font-medium text-gray-900">
+                ${escapeHtml(user.username)}
+                ${user.is_me ? '<span class="ml-1 text-xs text-indigo-500">(나)</span>' : ''}
+            </td>
+            <td class="px-5 py-3">
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${ROLE_BADGE[user.role] || ''}">
+                    ${escapeHtml(user.role_name)} (${user.role})
+                </span>
+            </td>
+            <td class="px-5 py-3 text-gray-500">${user.post_count}건</td>
+            <td class="px-5 py-3">
+                <div class="flex gap-2">
+                    <select class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500">${options}</select>
+                    <button class="px-3 py-1.5 rounded-lg text-sm bg-indigo-600 text-white hover:bg-indigo-700">저장</button>
+                </div>
+            </td>
+            <td class="px-5 py-3 text-right"></td>`;
+
+        const select = tr.querySelector('select');
+        tr.querySelector('button').addEventListener('click', () => updateRole(user.id, select.value));
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'px-3 py-1.5 rounded-lg text-sm border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed';
+        delBtn.textContent = '삭제';
+        delBtn.disabled = user.is_me;
+        if (user.is_me) delBtn.title = '자기 자신은 삭제할 수 없습니다.';
+        delBtn.addEventListener('click', () => deleteUser(user.id, user.username, user.post_count));
+        tr.lastElementChild.appendChild(delBtn);
+
+        tbody.appendChild(tr);
+    });
+}
+
+async function updateRole(userId, role) {
+    const res = await fetch('/api/admin/users/' + userId, {
+        method: 'PATCH',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ role: Number(role) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    flash(data.msg || (res.ok ? '변경했습니다.' : '변경에 실패했습니다.'), res.ok);
+    if (res.ok) loadUsers();
+}
+
+async function deleteUser(userId, username, postCount) {
+    if (!confirm(`${username}님을 삭제할까요? 게시글 ${postCount}건도 함께 삭제됩니다.`)) return;
+    const res = await fetch('/api/admin/users/' + userId, {
+        method: 'DELETE',
+        headers: authHeaders(),
+    });
+    const data = await res.json().catch(() => ({}));
+    flash(data.msg || (res.ok ? '삭제했습니다.' : '삭제에 실패했습니다.'), res.ok);
+    if (res.ok) loadUsers();
+}
+
+document.addEventListener('DOMContentLoaded', loadUsers);
+</script>
+</body>
+</html>

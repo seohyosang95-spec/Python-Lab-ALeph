@@ -1,0 +1,75 @@
+<!-- 모든 페이지가 함께 쓰는 헤더.
+     로그인 유저명과 등급은 서버가 직접 렌더링한다. 화면에 보이는 등급과
+     실제 인가 판정이 같은 값(DB 의 users.role)에서 나오도록 하기 위함이다. -->
+<header class="bg-white shadow-sm sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center gap-3 flex-wrap">
+        <div class="flex items-center space-x-3 flex-wrap">
+            <a href="/" class="text-xl font-bold text-indigo-600">✨ 모던 게시판</a>
+            <a href="/public-posts" class="text-sm font-medium text-emerald-600 hover:underline bg-emerald-50 px-3 py-1.5 rounded-lg transition">부산 테마여행 보기</a>
+
+            <!-- 등급 링크는 서버가 렌더링한다. 다만 링크를 숨기는 것은 접근 제어가
+                 아니다. 실제 차단은 각 라우트의 @page_role_required 가 담당한다. -->
+            {% if current_user and current_user.role >= ROLE_GOLD %}
+            <a href="/gold" class="text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg transition">☕ 골드 라운지</a>
+            {% endif %}
+            {% if current_user and current_user.role >= ROLE_ADMIN %}
+            <a href="/admin" class="text-sm font-medium text-white bg-slate-700 hover:bg-slate-800 px-3 py-1.5 rounded-lg transition">🛠️ 관리자</a>
+            {% endif %}
+        </div>
+
+        <div id="auth-nav" class="flex items-center space-x-2">
+            {% if current_user %}
+            <span class="text-sm font-medium text-gray-700">
+                <strong class="text-indigo-600">{{ current_user.username }}</strong>님
+            </span>
+            <span class="text-xs font-semibold px-2 py-1 rounded-full
+                {% if current_user.role >= ROLE_ADMIN %}bg-indigo-100 text-indigo-700
+                {% elif current_user.role >= ROLE_GOLD %}bg-amber-100 text-amber-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}"
+                title="users.role = {{ current_user.role }}">
+                {{ current_user.role_name }} ({{ current_user.role }})
+            </span>
+            <button onclick="navLogout()" class="text-sm text-red-500 hover:underline">로그아웃</button>
+            {% elif request.endpoint == 'index' %}
+            <button onclick="openAuthModal(true)" class="text-sm text-indigo-600 font-medium hover:underline">로그인</button>
+            <button onclick="openAuthModal(false)" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">회원가입</button>
+            {% else %}
+            <a href="/?login=1" class="text-sm text-indigo-600 font-medium hover:underline">로그인</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<script>
+    // 서버가 판정한 로그인 사용자. 화면 표시와 인가 판정의 출처를 하나로 맞춘다.
+    window.CURRENT_USER = {% if current_user %}{{
+        {'id': current_user.id, 'username': current_user.username,
+         'role': current_user.role, 'role_name': current_user.role_name} | tojson
+    }}{% else %}null{% endif %};
+
+    function getCookie(name) {
+        const hit = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+        return hit ? decodeURIComponent(hit.split('=')[1]) : null;
+    }
+
+    /* 토큰은 두 경로가 모두 유효하다.
+         - localStorage : Authorization 헤더 (기존 방식)
+         - 쿠키         : 자동으로 실림. 단 변경 요청에는 CSRF 토큰이 필요하다.
+       둘 다 실어 보내야 localStorage 가 비어 있어도 요청이 통과한다. */
+    function authHeaders(extra) {
+        const headers = Object.assign({}, extra || {});
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const csrf = getCookie('csrf_access_token');
+        if (csrf) headers['X-CSRF-TOKEN'] = csrf;
+        return headers;
+    }
+
+    async function navLogout() {
+        // 서버 쿠키까지 지워야 /gold, /admin 접근이 함께 막힌다.
+        await fetch('/api/auth/logout', { method: 'POST' }).catch(function () {});
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        location.href = '/';
+    }
+</script>

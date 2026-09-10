@@ -8,19 +8,8 @@
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
 
-    <!-- Navbar -->
-    <header class="bg-white shadow-sm sticky top-0 z-10">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-4">
-                <h1 class="text-xl font-bold text-indigo-600 cursor-pointer" onclick="resetAndLoad()">✨ 모던 게시판</h1>
-                <!-- 공공데이터 페이지로 이동하는 헤더 링크 추가 -->
-                <a href="/public-posts" class="text-sm font-medium text-emerald-600 hover:underline bg-emerald-50 px-3 py-1.5 rounded-lg transition">부산 테마여행 보기</a>
-            </div>
-            <div id="auth-nav" class="flex items-center space-x-3">
-                <!-- 동적 렌더링 -->
-            </div>
-        </div>
-    </header>
+    <!-- Navbar : 등급 링크와 유저명·권한 표기는 _nav.html 에서 서버가 렌더링한다 -->
+    {% include '_nav.html' %}
 
     <!-- Main Container -->
     <main class="max-w-4xl mx-auto px-4 py-6 flex-1 w-full">
@@ -91,30 +80,25 @@
     <script>
         let currentCursor = null;
         let isAuthModeLogin = true;
-        let currentUsername = localStorage.getItem('username');
+        // 로그인 여부의 기준은 서버가 쿠키로 판정한 CURRENT_USER 다.
+        // localStorage 토큰은 fetch 요청의 Authorization 헤더용으로만 쓴다.
+        let currentUsername = window.CURRENT_USER ? window.CURRENT_USER.username : null;
         let token = localStorage.getItem('token');
 
         document.addEventListener('DOMContentLoaded', () => {
             updateAuthUI();
             loadPosts(true);
+            // 403 예외 화면의 "로그인하기" 버튼(/?login=1)에서 넘어온 경우
+            if (new URLSearchParams(location.search).get('login') === '1' && !window.CURRENT_USER) {
+                openAuthModal(true);
+            }
         });
 
+        // 헤더의 유저명·권한 표기는 _nav.html 에서 서버가 렌더링한다.
+        // 여기서는 글쓰기 버튼 노출만 로그인 상태에 맞춘다.
         function updateAuthUI() {
-            const nav = document.getElementById('auth-nav');
             const writeBtn = document.getElementById('write-btn');
-            if (token && currentUsername) {
-                nav.innerHTML = `
-                    <span class="text-sm font-medium text-gray-700">안녕하세요, <strong class="text-indigo-600">${currentUsername}</strong>님</span>
-                    <button onclick="logout()" class="text-sm text-red-500 hover:underline">로그아웃</button>
-                `;
-                writeBtn.classList.remove('hidden');
-            } else {
-                nav.innerHTML = `
-                    <button onclick="openAuthModal(true)" class="text-sm text-indigo-600 font-medium hover:underline">로그인</button>
-                    <button onclick="openAuthModal(false)" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">회원가입</button>
-                `;
-                writeBtn.classList.add('hidden');
-            }
+            writeBtn.classList.toggle('hidden', !window.CURRENT_USER);
         }
 
         async function loadPosts(reset = false) {
@@ -143,6 +127,8 @@
 
             data.posts.forEach(post => {
                 const isOwner = currentUsername && post.author === currentUsername;
+                // 관리자(2)는 남의 글도 삭제할 수 있다. 수정은 본인만 가능하다.
+                const isModerator = !!window.CURRENT_USER && window.CURRENT_USER.role >= 2;
                 const div = document.createElement('div');
                 div.className = "bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition";
                 div.innerHTML = `
@@ -157,7 +143,11 @@
                             <button onclick="openEditModal(${post.id}, '${escapeAttr(post.title)}', '${escapeAttr(post.content)}', '${post.category}')" class="text-xs text-indigo-600 hover:underline">수정</button>
                             <button onclick="deletePost(${post.id})" class="text-xs text-red-500 hover:underline">삭제</button>
                         </div>
-                    ` : ''}
+                    ` : (isModerator ? `
+                        <div class="flex justify-end">
+                            <button onclick="deletePost(${post.id}, '${escapeAttr(post.author)}')" class="text-xs font-medium text-red-600 border border-red-200 rounded-md px-2 py-1 hover:bg-red-50">관리자 삭제</button>
+                        </div>
+                    ` : '')}
                 `;
                 container.appendChild(div);
             });
@@ -210,9 +200,9 @@
                     currentUsername = data.username;
                     localStorage.setItem('token', token);
                     localStorage.setItem('username', currentUsername);
-                    updateAuthUI();
                     closeAuthModal();
-                    loadPosts(true);
+                    // 등급 링크(골드/관리자)는 서버가 렌더링하므로 새로고침해야 반영된다.
+                    location.reload();
                 } else {
                     alert('회원가입 완료! 로그인해주세요.');
                     openAuthModal(true);
@@ -222,14 +212,8 @@
             }
         }
 
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('username');
-            token = null;
-            currentUsername = null;
-            updateAuthUI();
-            loadPosts(true);
-        }
+        // 로그아웃은 _nav.html 의 navLogout() 이 담당한다.
+        // 서버 쿠키까지 지워야 /gold, /admin 접근이 함께 막힌다.
 
         // 글 작성/수정 모달 제어
         function openModal() {
@@ -263,10 +247,7 @@
 
             const res = await fetch(url, {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers: authHeaders({'Content-Type': 'application/json'}),
                 body: JSON.stringify({title, content, category})
             });
 
@@ -278,18 +259,23 @@
             }
         }
 
-        async function deletePost(id) {
-            if (!confirm('정말 삭제하시겠습니까?')) return;
+        async function deletePost(id, moderatedAuthor) {
+            const question = moderatedAuthor
+                ? `관리자 권한으로 ${moderatedAuthor}님의 글을 삭제합니다. 계속할까요?`
+                : '정말 삭제하시겠습니까?';
+            if (!confirm(question)) return;
 
             const res = await fetch(`/api/posts/${id}`, {
                 method: 'DELETE',
-                headers: {'Authorization': `Bearer ${token}`}
+                headers: authHeaders()
             });
 
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
+                if (data.moderated) alert(data.msg);
                 loadPosts(true);
             } else {
-                alert('삭제 권한이 없습니다.');
+                alert(data.msg || '삭제 권한이 없습니다.');
             }
         }
 

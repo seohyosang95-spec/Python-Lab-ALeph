@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ status }} · 접근 거부</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+{% include '_nav.html' %}
+
+<main class="max-w-2xl mx-auto px-4 py-16 flex-1 w-full">
+    <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
+        <div class="mx-auto w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-5">
+            <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+        </div>
+
+        <p class="text-sm font-semibold tracking-widest text-red-500 mb-2">HTTP {{ status }}</p>
+        <h1 class="text-2xl font-bold text-gray-900 mb-3">
+            {% if reason == 'unauthenticated' %}로그인이 필요합니다{% else %}접근 권한이 없습니다{% endif %}
+        </h1>
+        <p class="text-gray-600 mb-6">{{ message }}</p>
+
+        <!-- 요구 등급과 내 등급을 나란히 보여준다.
+             이 화면 한 장으로 "왜 막혔는지"까지 증거가 되도록. -->
+        <div class="grid grid-cols-2 gap-3 text-left mb-8">
+            <div class="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                <p class="text-xs text-gray-500 mb-1">요구 등급</p>
+                <p class="text-lg font-bold text-indigo-600">
+                    {{ required_role_name }} <span class="text-sm font-normal text-gray-400">({{ required_role }})</span>
+                </p>
+            </div>
+            <div class="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                <p class="text-xs text-gray-500 mb-1">내 등급</p>
+                <p class="text-lg font-bold {% if user %}text-gray-700{% else %}text-gray-400{% endif %}">
+                    {% if user %}{{ user.role_name }} <span class="text-sm font-normal text-gray-400">({{ user.role }})</span>
+                    {% else %}비로그인{% endif %}
+                </p>
+            </div>
+        </div>
+
+        <div class="flex justify-center gap-2">
+            <a href="/" class="px-5 py-2.5 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition">게시판으로 돌아가기</a>
+            {% if not user %}
+            <a href="/?login=1" class="px-5 py-2.5 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100 transition">로그인하기</a>
+            {% endif %}
+        </div>
+
+        <p class="mt-8 text-xs text-gray-400">
+            등급 승급은 관리자만 할 수 있습니다. 관리자에게 요청하세요.
+        </p>
+    </div>
+</main>
+</body>
+</html>
