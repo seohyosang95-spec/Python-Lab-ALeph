@@ -1,1 +1,6 @@
 .env
+
+__pycache__/
+*.pyc
+*.zip
+_7_test/
