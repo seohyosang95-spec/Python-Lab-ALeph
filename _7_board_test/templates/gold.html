@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 — 회원 권한(인가) 관리</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+  {% include 'partials/_nav.html' %}
+
+  <main class="max-w-5xl mx-auto px-4 py-6 flex-1 w-full">
+    <div class="mb-6">
+      <h2 class="text-2xl font-bold">🔐 관리자 — 회원 권한(인가) 관리</h2>
+      <p class="text-sm text-gray-500 mt-1">RBAC 등급(user/gold/admin) 부여·회수. admin 계정으로 로그인해야 합니다.</p>
+    </div>
+
+    <!-- 로그인 -->
+    <section id="login-box" class="bg-white rounded-xl shadow-sm p-4 mb-6">
+      <h3 class="font-semibold mb-3">관리자 로그인</h3>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input id="lg-user" placeholder="아이디" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1">
+        <input id="lg-pass" type="password" placeholder="비밀번호" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1">
+        <button id="lg-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">로그인</button>
+      </div>
+      <p id="lg-msg" class="text-xs text-red-600 mt-2"></p>
+    </section>
+
+    <div id="admin-area" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <p class="text-sm text-gray-600">로그인: <b id="me-name"></b> <span class="text-emerald-600">(admin)</span></p>
+        <button id="logout-btn" class="text-sm text-gray-500 hover:text-gray-800 underline">로그아웃</button>
+      </div>
+
+      <!-- 권한 부여(인가) -->
+      <section class="bg-white rounded-xl shadow-sm p-4">
+        <h3 class="font-semibold mb-1">권한 부여 (인가)</h3>
+        <p class="text-xs text-gray-500 mb-1">
+          등급은 계단식입니다 —
+          <span class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">user 일반</span> ‹
+          <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">gold 골드</span> ‹
+          <span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700">admin 관리자</span>
+        </p>
+        <p class="text-xs text-gray-500 mb-3">
+          <b>gold</b> 를 주면 그 회원은 🏅 골드등급 화면(<code>/gold</code>)을 볼 수 있습니다.
+          ⚠️ 실습: <b>admin</b> 을 부여해 "불필요한 과잉권한" 을 만들어 봅니다.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input id="gr-user" placeholder="대상 아이디" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1">
+          <select id="gr-role" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="gold">🏅 gold (골드)</option>
+            <option value="admin">🔐 admin (관리자)</option>
+            <option value="user">user (일반)</option>
+          </select>
+          <input id="gr-reason" placeholder="사유(선택)" class="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1">
+          <button id="gr-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700">부여</button>
+        </div>
+        <p id="gr-msg" class="text-xs mt-2"></p>
+      </section>
+
+      <!-- 정책 위반(허용목록 밖 admin) -->
+      <section class="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-500">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold">정책 위반 — 허용목록 밖 admin</h3>
+          <div class="flex gap-2 items-center">
+            <input id="allow-in" placeholder="허용목록: lsy,instructor" class="border border-gray-300 rounded-lg px-3 py-1.5 text-xs w-56">
+            <button id="viol-btn" class="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg text-xs">조회</button>
+          </div>
+        </div>
+        <div id="viol-list" class="text-sm text-gray-500">허용목록을 넣고 조회하세요.</div>
+      </section>
+
+      <!-- 회원 목록 -->
+      <section class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-4 flex items-center justify-between">
+          <h3 class="font-semibold">회원 목록</h3>
+          <button id="refresh-users" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-indigo-700">새로고침</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm whitespace-nowrap">
+            <thead class="bg-gray-50 text-gray-600">
+              <tr>
+                <th class="text-left px-4 py-2 font-medium">#</th>
+                <th class="text-left px-4 py-2 font-medium">아이디</th>
+                <th class="text-left px-4 py-2 font-medium">역할</th>
+                <th class="text-left px-4 py-2 font-medium">부여자</th>
+                <th class="text-left px-4 py-2 font-medium">부여시각</th>
+                <th class="text-left px-4 py-2 font-medium">사유</th>
+                <th class="text-left px-4 py-2 font-medium">동작</th>
+              </tr>
+            </thead>
+            <tbody id="user-rows" class="divide-y divide-gray-100">
+              <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">로그인 후 불러옵니다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="text-xs text-gray-400">
+        API: <code>GET /api/admin/users</code> · <code>POST /api/admin/grant</code> ·
+        <code>POST /api/admin/revoke</code> · <code>GET /api/admin/violations</code>
+        — 회수(revoke)는 파이썬 봇→Graylog→n8n 이 자동으로도 호출합니다.
+      </p>
+    </div>
+  </main>
+
+  <script>
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
+      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    // 게시판(index.html)과 같은 키를 쓴다 — 한 번 로그인하면 모든 화면에서 유지된다.
+    const TOKEN_KEY = 'token', NAME_KEY = 'username';
+    const token = () => localStorage.getItem(TOKEN_KEY);
+    const authH = () => ({ 'Authorization': 'Bearer ' + token() });
+
+    async function login() {
+      const u = document.getElementById('lg-user').value.trim();
+      const p = document.getElementById('lg-pass').value;
+      const msg = document.getElementById('lg-msg');
+      msg.textContent = '';
+      try {
+        const r = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p }),
+        });
+        const d = await r.json();
+        if (!r.ok) { msg.textContent = d.msg || '로그인 실패'; return; }
+        localStorage.setItem(TOKEN_KEY, d.access_token);
+        localStorage.setItem(NAME_KEY, d.username);
+        await enterAdmin();
+      } catch (e) { msg.textContent = '네트워크 오류'; }
+    }
+
+    async function enterAdmin() {
+      // admin 권한 확인 겸 목록 로드
+      const r = await fetch('/api/admin/users', { headers: authH() });
+      if (r.status === 401) {
+        document.getElementById('lg-msg').textContent =
+          '이 계정은 admin 이 아닙니다(관리자 권한 필요).';
+        logout(); return;
+      }
+      document.getElementById('login-box').classList.add('hidden');
+      document.getElementById('admin-area').classList.remove('hidden');
+      document.getElementById('me-name').textContent = localStorage.getItem(NAME_KEY) || '';
+      renderUsers(await r.json());
+    }
+
+    function logout() {
+      localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(NAME_KEY);
+      document.getElementById('admin-area').classList.add('hidden');
+      document.getElementById('login-box').classList.remove('hidden');
+    }
+
+    function renderUsers(d) {
+      const tb = document.getElementById('user-rows');
+      const rows = d.users || [];
+      if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">회원이 없습니다.</td></tr>'; return; }
+      const BADGE = {
+        admin: '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">🔐 admin</span>',
+        gold: '<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">🏅 gold</span>',
+        user: '<span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs">user</span>',
+      };
+      tb.innerHTML = rows.map(u => {
+        // user 가 아니면(gold·admin) 회수 대상 — 회수는 언제나 user 로 되돌린다.
+        const canRevoke = u.role !== 'user';
+        const roleBadge = BADGE[u.role] || esc(u.role);
+        const action = canRevoke
+          ? `<button data-user="${esc(u.username)}" class="revoke-btn bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700">회수</button>`
+          : '<span class="text-gray-300 text-xs">—</span>';
+        return `<tr class="hover:bg-gray-50">
+          <td class="px-4 py-2 text-gray-400">${u.id}</td>
+          <td class="px-4 py-2 font-medium">${esc(u.username)}</td>
+          <td class="px-4 py-2">${roleBadge}</td>
+          <td class="px-4 py-2 text-gray-600">${esc(u.role_granted_by || '')}</td>
+          <td class="px-4 py-2 text-gray-400">${esc((u.role_granted_at || '').replace('T', ' ').slice(0, 19))}</td>
+          <td class="px-4 py-2 text-gray-600 max-w-xs truncate" title="${esc(u.role_reason)}">${esc(u.role_reason || '')}</td>
+          <td class="px-4 py-2">${action}</td>
+        </tr>`;
+      }).join('');
+      tb.querySelectorAll('.revoke-btn').forEach(b =>
+        b.addEventListener('click', () => revoke(b.dataset.user)));
+    }
+
+    async function refreshUsers() {
+      const r = await fetch('/api/admin/users', { headers: authH() });
+      if (r.ok) renderUsers(await r.json());
+    }
+
+    async function grant() {
+      const msg = document.getElementById('gr-msg');
+      const body = {
+        username: document.getElementById('gr-user').value.trim(),
+        role: document.getElementById('gr-role').value,
+        reason: document.getElementById('gr-reason').value.trim(),
+      };
+      const r = await fetch('/api/admin/grant', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      msg.className = 'text-xs mt-2 ' + (r.ok ? 'text-emerald-600' : 'text-red-600');
+      msg.textContent = r.ok ? `${d.username}: ${d.old_role} → ${d.new_role}` : (d.msg || '실패');
+      if (r.ok) refreshUsers();
+    }
+
+    async function revoke(username) {
+      if (!confirm(`${username} 의 권한을 회수(user 로 강등)할까요?`)) return;
+      const r = await fetch('/api/admin/revoke', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authH() },
+        body: JSON.stringify({ username, reason: '관리자 페이지 수동 회수' }),
+      });
+      if (r.ok) refreshUsers();
+    }
+
+    async function violations() {
+      const allow = document.getElementById('allow-in').value.trim();
+      const qs = allow ? '?allowlist=' + encodeURIComponent(allow) : '';
+      const r = await fetch('/api/admin/violations' + qs, { headers: authH() });
+      const d = await r.json();
+      const box = document.getElementById('viol-list');
+      if (!r.ok) { box.textContent = d.msg || '조회 실패'; return; }
+      const v = d.violations || [];
+      box.innerHTML = v.length
+        ? v.map(u => `<div class="flex items-center gap-2 py-1">
+             <span class="font-medium">${esc(u.username)}</span>
+             <span class="text-xs text-gray-400">부여자 ${esc(u.role_granted_by || '?')}</span>
+             <button data-user="${esc(u.username)}" class="viol-revoke bg-red-600 text-white px-2 py-0.5 rounded text-xs hover:bg-red-700">즉시 회수</button>
+           </div>`).join('')
+        : '<span class="text-emerald-600">위반 없음(허용목록 밖 admin 없음).</span>';
+      box.querySelectorAll('.viol-revoke').forEach(b =>
+        b.addEventListener('click', () => revoke(b.dataset.user).then(violations)));
+    }
+
+    document.getElementById('lg-btn').addEventListener('click', login);
+    document.getElementById('lg-pass').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('gr-btn').addEventListener('click', grant);
+    document.getElementById('viol-btn').addEventListener('click', violations);
+    document.getElementById('refresh-users').addEventListener('click', refreshUsers);
+
+    // 이미 토큰이 있으면 바로 관리자 화면 시도
+    if (token()) enterAdmin().catch(() => logout());
+  </script>
+</body>
+</html>

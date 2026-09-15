@@ -1,218 +1,95 @@
-from datetime import timedelta
-from flask import Flask, jsonify, render_template, request
-from flask_jwt_extended import (
-    JWTManager,
-    create_access_token,
-    get_jwt_identity,
-    jwt_required,
-)
-from flask_sqlalchemy import SQLAlchemy
-import requests
-from werkzeug.security import check_password_hash, generate_password_hash
+"""엔트리포인트 — 앱 팩토리(create_app) 패턴.
 
-app = Flask(__name__)
+구조
+  config.py       설정(.env 로딩)
+  extensions.py   db · jwt 인스턴스
+  models/         User · Post · SecurityEvent
+  controllers/    page · auth · post · security · public (블루프린트)
+  templates/      화면 (partials/_nav.html = 공통 반응형 헤더)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    'mysql+pymysql://root:123456@localhost:3306/my_new_board_db'
-)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = 'super-secret-key-change-this'
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=2)
+실행:  python app.py   →  http://localhost:5000
+"""
+from flask import Flask, jsonify, request
+from sqlalchemy import inspect, text
 
-db = SQLAlchemy(app)
-jwt = JWTManager(app)
+from config import Config
+from controllers import all_blueprints
+from extensions import db, jwt
+from models import BlockedIP
 
 
-# ----------------- Database Models -----------------
-class User(db.Model):
-  __tablename__ = 'users'
-  id = db.Column(db.Integer, primary_key=True)
-  username = db.Column(db.String(80), unique=True, nullable=False)
-  password = db.Column(db.String(255), nullable=False)
+def _client_ip():
+  """요청의 실제 클라이언트 IP. 프록시(n8n·nginx) 뒤면 X-Forwarded-For 첫 홉을 신뢰.
+  (랩 한정 규칙 — 실서비스는 신뢰 프록시 목록으로 검증해야 스푸핑을 막는다.)"""
+  xff = request.headers.get('X-Forwarded-For', '')
+  if xff:
+    return xff.split(',')[0].strip()
+  return request.remote_addr or ''
 
 
-class Post(db.Model):
-  __tablename__ = 'posts'
-  id = db.Column(db.Integer, primary_key=True)
-  title = db.Column(db.String(200), nullable=False)
-  content = db.Column(db.Text, nullable=False)
-  category = db.Column(db.String(50), nullable=False, default='일반')
-  author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-  author = db.relationship('User', backref=db.backref('posts', lazy=True))
+def _ensure_schema():
+  """기존 users 표에 role 관련 컬럼이 없으면 추가(가벼운 자동 마이그레이션).
+
+  db.create_all() 은 '없는 표'만 만들고 '기존 표'는 손대지 않는다. 이미 운영 중인
+  users 표에 role/감사 컬럼을 더하려면 ALTER 가 필요하므로, 여기서 컬럼 유무를
+  검사해 없을 때만 한 번 추가한다(있으면 조용히 통과 — 여러 번 켜도 안전)."""
+  cols = {c['name'] for c in inspect(db.engine).get_columns('users')}
+  adds = {
+      'role': "ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'",
+      'role_granted_by': "ALTER TABLE users ADD COLUMN role_granted_by VARCHAR(80) NULL",
+      'role_granted_at': "ALTER TABLE users ADD COLUMN role_granted_at DATETIME NULL",
+      'role_reason': "ALTER TABLE users ADD COLUMN role_reason VARCHAR(200) NULL",
+      # ── 계정 잠금(브루트포스 대응) ──
+      'is_locked': "ALTER TABLE users ADD COLUMN is_locked TINYINT(1) NOT NULL DEFAULT 0",
+      'locked_at': "ALTER TABLE users ADD COLUMN locked_at DATETIME NULL",
+      'lock_reason': "ALTER TABLE users ADD COLUMN lock_reason VARCHAR(200) NULL",
+      'failed_logins': "ALTER TABLE users ADD COLUMN failed_logins INT NOT NULL DEFAULT 0",
+  }
+  with db.engine.begin() as conn:
+    for name, ddl in adds.items():
+      if name not in cols:
+        conn.execute(text(ddl))
 
 
-with app.app_context():
-  db.create_all()
+def create_app(config_class=Config):
+  app = Flask(__name__)
+  app.config.from_object(config_class)
+
+  # 확장 초기화
+  db.init_app(app)
+  jwt.init_app(app)
+
+  # 컨트롤러(블루프린트) 등록
+  for bp in all_blueprints:
+    app.register_blueprint(bp)
+
+  # 테이블 생성 (models 를 import 한 뒤여야 한다 — controllers 가 이미 import 함)
+  with app.app_context():
+    db.create_all()
+    _ensure_schema()   # 기존 users 표에 role 컬럼 보강
+
+  @app.before_request
+  def _block_ip_guard():
+    """실차단(active response): 차단된 IP 의 요청은 앱에 닿기 전에 403 으로 되돌린다.
+
+    - 관리자 API(/api/admin/*) 는 예외 — 그래야 운영자·n8n 이 차단/해제를 계속 할 수 있다
+      (자기 자신을 잠가 복구 불능이 되는 것을 막는 안전장치).
+    - 매 요청 blocked_ips 표를 조회한다. 랩 규모에선 충분하고, 실서비스는
+      캐시(예: Redis)나 방화벽(nftables) 계층으로 올려야 한다."""
+    if request.path.startswith('/api/admin'):
+      return None
+    ip = _client_ip()
+    if ip and db.session.get(BlockedIP, ip):
+      return jsonify({'msg': '차단된 IP 입니다(관리자에게 문의).', 'ip': ip, 'blocked': True}), 403
+    return None
+
+  return app
 
 
-# ----------------- Auth Endpoints -----------------
-@app.route('/api/auth/register', methods=['POST'])
-def register():
-  data = request.get_json()
-  if User.query.filter_by(username=data['username']).first():
-    return jsonify({'msg': '이미 존재하는 사용자입니다.'}), 400
+app = create_app()
 
-  hashed_password = generate_password_hash(data['password'])
-  new_user = User(username=data['username'], password=hashed_password)
-  db.session.add(new_user)
-  db.session.commit()
-  return jsonify({'msg': '회원가입 성공'}), 201
-
-
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-  data = request.get_json()
-  user = User.query.filter_by(username=data['username']).first()
-  if not user or not check_password_hash(user.password, data['password']):
-    return jsonify({'msg': '아이디 또는 비밀번호가 잘못되었습니다.'}), 401
-
-  access_token = create_access_token(identity=str(user.id))
-  return jsonify(access_token=access_token, username=user.username)
-
-
-# ----------------- Post Endpoints (RESTful) -----------------
-@app.route('/')
-def index():
-  return render_template('index.html')
-
-
-@app.route('/api/posts', methods=['GET'])
-def get_posts():
-  cursor = request.args.get('cursor', type=int)
-  limit = request.args.get('limit', default=5, type=int)
-  search = request.args.get('search', default='', type=str)
-  category = request.args.get('category', default='', type=str)
-
-  query = Post.query
-  if category and category != '전체':
-    query = query.filter(Post.category == category)
-  if search:
-    query = query.filter(
-        (Post.title.like(f'%{search}%')) | (Post.content.like(f'%{search}%'))
-    )
-  if cursor:
-    query = query.filter(Post.id < cursor)
-
-  posts = query.order_by(Post.id.desc()).limit(limit + 1).all()
-  has_more = len(posts) > limit
-  if has_more:
-    posts = posts[:limit]
-    next_cursor = posts[-1].id
-  else:
-    next_cursor = None
-
-  results = []
-  for p in posts:
-    results.append({
-        'id': p.id,
-        'title': p.title,
-        'content': p.content,
-        'category': p.category,
-        'author': p.author.username,
-        'author_id': p.author_id,
-    })
-
-  return jsonify({
-      'posts': results,
-      'next_cursor': next_cursor,
-      'has_more': has_more,
-  })
-
-
-@app.route('/api/posts', methods=['POST'])
-@jwt_required()
-def create_post():
-  current_user_id = int(get_jwt_identity())
-  data = request.get_json()
-  new_post = Post(
-      title=data['title'],
-      content=data['content'],
-      category=data.get('category', '일반'),
-      author_id=current_user_id,
-  )
-  db.session.add(new_post)
-  db.session.commit()
-  return jsonify({'msg': '게시글이 등록되었습니다.'}), 201
-
-
-@app.route('/api/posts/<int:id>', methods=['PUT'])
-@jwt_required()
-def update_post(id):
-  current_user_id = int(get_jwt_identity())
-  post = Post.query.get_or_404(id)
-  if post.author_id != current_user_id:
-    return jsonify({'msg': '권한이 없습니다.'}), 403
-
-  data = request.get_json()
-  post.title = data.get('title', post.title)
-  post.content = data.get('content', post.content)
-  post.category = data.get('category', post.category)
-  db.session.commit()
-  return jsonify({'msg': '수정되었습니다.'})
-
-
-@app.route('/api/posts/<int:id>', methods=['DELETE'])
-@jwt_required()
-def delete_post(id):
-  current_user_id = int(get_jwt_identity())
-  post = Post.query.get_or_404(id)
-  if post.author_id != current_user_id:
-    return jsonify({'msg': '권한이 없습니다.'}), 403
-
-  db.session.delete(post)
-  db.session.commit()
-  return jsonify({'msg': '삭제되었습니다.'})
-
-
-# ----------------- 부산 테마여행 공공 데이터 연동 엔드포인트 -----------------
-import requests  # 상단에 이미 없다면 추가
-
-# ----------------- 공공 데이터 연동 설정 (부산테마여행) -----------------
-import os
-from dotenv import load_dotenv
-
-# 같은 폴더의 .env 를 읽어 환경변수로 올려 준다 (이 한 줄이 핵심)
-load_dotenv()
-
-# .env 파일에 정의한 변수 이름으로 키를 가져온다
-PUBLIC_API_KEY = os.environ.get("PUBLIC_API_KEY")
-
-# 키 값 자체는 절대 출력하지 않고 안전하게 확인
-if PUBLIC_API_KEY:
-    print("키 로드됨 — 앞 4자리:", PUBLIC_API_KEY[:4] + "****")
-    # 이후 불러온 key를 활용해 공공데이터 API 요청 로직 작성
-else:
-    print("키 없음 — 더미 실습 진행 또는 설정을 확인하세요.")
-
-PUBLIC_API_URL = "http://apis.data.go.kr/6260000/RecommendedService/getRecommendedKr"
-
-# 1) 외부 공공 API 목록 데이터를 클라이언트에 전달하는 API 라우트 (100건)
-@app.route('/api/public/posts', methods=['GET'])
-def get_public_posts():
-    params = {
-        'serviceKey': PUBLIC_API_KEY,
-        'numOfRows': '100',
-        'pageNo': '1',
-        'resultType': 'json'
-    }
-    try:
-        response = requests.get(PUBLIC_API_URL, params=params)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return jsonify({"msg": "공공 API 호출 실패", "status": response.status_code}), 500
-    except Exception as e:
-        return jsonify({"msg": "서버 통신 에러 발생", "error": str(e)}), 500
-
-# 2) 공공데이터 목록 화면 페이지 라우트
-@app.route('/public-posts')
-def public_posts_page():
-    return render_template('public_posts.html')
-
-# 3) 공공데이터 상세 보기 화면 페이지 라우트 (UC_SEQ 식별자 이용)
-@app.route('/public-posts/<int:uc_seq>')
-def public_post_detail_page(uc_seq):
-    return render_template('public_detail.html', uc_seq=uc_seq)
 
 if __name__ == '__main__':
-  app.run(debug=True, port=5000)
+  # host='0.0.0.0' 이면 같은 공유기의 다른 기기에서도 접속 가능.
+  # 도커 안 n8n 에서는 http://host.docker.internal:5000 으로 부른다.
+  app.run(debug=True, host='0.0.0.0', port=5000)
